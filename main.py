@@ -1,7 +1,20 @@
 import json
+import logging
 from typing import Any
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
 
+from httpx import Client
+from httpx import RequestError
+from httpx import HTTPStatusError
+from httpx import InvalidURL
+from httpx import CookieConflict
+from httpx import StreamError
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s][%(levelname)s]: %(message)s"
+)
 
 class HTTPResponse:
     """Класс для HTTP-ответа"""
@@ -36,7 +49,6 @@ class HTTPResponse:
         return self.content
 
 
-
 class HTTPClientInterface(ABC):
     """Абстрактный интерфейс для HTTP клиента"""
 
@@ -45,11 +57,10 @@ class HTTPClientInterface(ABC):
         self,
         method: str,
         url: str,
-        headers: dict[str, str] | None = None,
+        timeout: int | None = None,
         params: dict[str, Any] | None = None,
-        data: dict[str, Any] | bytes | str | None = None,
-        json_data: Any | None = None,
-        timeout: float = 30.0,
+        json: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
         **kwargs
     ) -> HTTPResponse:
         """Выполняет HTTP запрос
@@ -70,6 +81,73 @@ class HTTPClientInterface(ABC):
         pass
 
 
+class HttpClient(HTTPClientInterface):
+    def __init__(
+        self,
+        base_url: str,
+        timeout: int = 30,
+        headers: dict[str, str] | None = None,
+    ):
+        self.__base_url = base_url
+        self.__timeout = timeout
+        self.__headers = headers
 
-    
+    def request(
+        self,
+        method: str,
+        url: str,
+        timeout: int | None = None,
+        params: dict[str, Any] | None = None,
+        json: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+        **kwargs
+    ) -> HTTPResponse:
+        with Client(
+            base_url=self.__base_url,
+            headers=headers or self.__headers,
+            timeout=timeout or self.__timeout,
+        ) as client:
+            try:
+                response = client.request(
+                    method=method,
+                    url=url,
+                    params=params,
+                    json=json,
+                    **kwargs
+                )
 
+                return HTTPResponse(
+                    status_code=response.status_code,
+                    content=response.content,
+                    headers=dict(response.headers),
+                    json_data=response.json() if response.headers.get('content-type') == 'application/json' else None
+                )
+
+            except RequestError as exc:
+                raise Exception(exc)
+            
+            except HTTPStatusError as exc:
+                raise Exception(exc)
+            
+            except InvalidURL as exc:
+                raise Exception(exc)
+            
+            except CookieConflict as exc:
+                raise Exception(exc)
+            
+            except StreamError as exc:
+                raise Exception(exc)
+
+
+
+if __name__ == "__main__":
+    http_client = HttpClient("https://jsonplaceholder.typicode.com")
+
+    try:
+        response = http_client.request(
+            "GET",
+            "/posts/1"
+        )
+        logging.info(response.text())
+    except Exception as exc:
+        logging.error(f"{exc}")
