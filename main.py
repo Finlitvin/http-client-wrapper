@@ -12,9 +12,9 @@ from httpx import CookieConflict
 from httpx import StreamError
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s][%(levelname)s]: %(message)s"
+    level=logging.INFO, format="[%(asctime)s][%(levelname)s]: %(message)s"
 )
+
 
 class HTTPResponse:
     """Класс для HTTP-ответа"""
@@ -24,33 +24,45 @@ class HTTPResponse:
         status_code: int,
         content: str | bytes,
         headers: dict[str, str],
-        json_data: Any | None = None
+        json_data: Any | None = None,
     ):
         self.status_code = status_code
         self.content = content
         self.headers = headers
         self._json = json_data
-    
+
     def json(self) -> Any:
         if self._json is not None:
             return self._json
-        
+
         if isinstance(self.content, bytes):
-            content_str = self.content.decode('utf-8')
+            content_str = self.content.decode("utf-8")
         else:
             content_str = self.content
         self._json = json.loads(content_str)
 
         return self._json
-    
+
     def text(self) -> str:
         if isinstance(self.content, bytes):
-            return self.content.decode('utf-8')
+            return self.content.decode("utf-8")
         return self.content
+
+    def __str__(self) -> str:
+        return f"HTTPResponse(status_code={self.status_code})"
 
 
 class HTTPClientInterface(ABC):
     """Абстрактный интерфейс для HTTP клиента"""
+
+    @abstractmethod
+    def __init__(
+        self,
+        base_url: str,
+        timeout: int = 30,
+        headers: dict[str, str] | None = None,
+    ):
+        pass
 
     @abstractmethod
     def request(
@@ -61,10 +73,10 @@ class HTTPClientInterface(ABC):
         params: dict[str, Any] | None = None,
         json: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
-        **kwargs
+        **kwargs,
     ) -> HTTPResponse:
         """Выполняет HTTP запрос
-        
+
         Args:
             method: HTTP метод (GET, POST, PUT, DELETE и т.д.)
             url: URL для запроса
@@ -74,7 +86,7 @@ class HTTPClientInterface(ABC):
             json_data: JSON данные для тела запроса
             timeout: Таймаут запроса в секундах
             **kwargs: Дополнительные параметры для конкретной реализации
-            
+
         Returns:
             HTTPResponse: Объект ответа
         """
@@ -100,7 +112,7 @@ class HttpClient(HTTPClientInterface):
         params: dict[str, Any] | None = None,
         json: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
-        **kwargs
+        **kwargs,
     ) -> HTTPResponse:
         with Client(
             base_url=self.__base_url,
@@ -109,45 +121,54 @@ class HttpClient(HTTPClientInterface):
         ) as client:
             try:
                 response = client.request(
-                    method=method,
-                    url=url,
-                    params=params,
-                    json=json,
-                    **kwargs
+                    method=method, url=url, params=params, json=json, **kwargs
                 )
 
                 return HTTPResponse(
                     status_code=response.status_code,
                     content=response.content,
                     headers=dict(response.headers),
-                    json_data=response.json() if response.headers.get('content-type') == 'application/json' else None
+                    json_data=response.json()
+                    if response.headers.get("content-type") == "application/json"
+                    else None,
                 )
 
             except RequestError as exc:
                 raise Exception(exc)
-            
+
             except HTTPStatusError as exc:
                 raise Exception(exc)
-            
+
             except InvalidURL as exc:
                 raise Exception(exc)
-            
+
             except CookieConflict as exc:
                 raise Exception(exc)
-            
+
             except StreamError as exc:
                 raise Exception(exc)
 
+
+class TestClient:
+    def __init__(self, http_client: HTTPClientInterface):
+        self.__client = http_client
+
+    def get_post(self, post_id):
+        try:
+            response = self.__client.request("GET", f"/posts/{post_id}")
+
+            return response
+        except Exception as exc:
+            raise Exception(exc)
 
 
 if __name__ == "__main__":
     http_client = HttpClient("https://jsonplaceholder.typicode.com")
 
+    test_client = TestClient(http_client)
+
     try:
-        response = http_client.request(
-            "GET",
-            "/posts/1"
-        )
-        logging.info(response.text())
+        response = test_client.get_post(1)
+        logging.info(response.json())
     except Exception as exc:
         logging.error(f"{exc}")
