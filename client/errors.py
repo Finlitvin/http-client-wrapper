@@ -2,8 +2,6 @@ from .base import HTTPResponseInterface
 
 
 class HTTPRequestError(Exception):
-    """Ошибка при"""
-
     def __init__(self, message: str, response: HTTPResponseInterface):
         self.message = message
         self.response = response

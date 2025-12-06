@@ -19,6 +19,7 @@ def test_request_get(
 ):
     method = "POST"
     url = ""
+    status_code = 200
 
     httpx_mock.add_response(
         url=url,
@@ -27,7 +28,7 @@ def test_request_get(
     )
     response: HTTPResponse = http_client.request(method, url)
 
-    assert response.status_code == 200
+    assert response.status_code == status_code
     assert response.headers.get(
         "content-type"
     ) == application_json_headers.get("content-type")
@@ -45,6 +46,7 @@ def test_request_post(
 ):
     method = "POST"
     url = ""
+    status_code = 200
 
     httpx_mock.add_response(
         method=method,
@@ -55,7 +57,7 @@ def test_request_post(
 
     response: HTTPResponse = http_client.request(method, url, json=json_dict)
 
-    assert response.status_code == 200
+    assert response.status_code == status_code
     assert response.headers.get(
         "content-type"
     ) == application_json_headers.get("content-type")
@@ -112,3 +114,35 @@ def test_http_status_error_with_exception(
     assert exc.value.response.content == json_bytes
     assert exc.value.response.text() == json_bytes.decode("utf-8")
     assert exc.value.response.json() == json_dict
+
+
+def test_http_status_error_without_exception(
+    http_client: HTTPClient,
+    httpx_mock: HTTPXMock,
+    application_json_headers: dict,
+    json_dict: dict,
+    json_bytes: bytes,
+):
+    method = "POST"
+    url = ""
+    status_code = 404
+
+    httpx_mock.add_response(
+        status_code=status_code,
+        method=method,
+        headers=application_json_headers,
+        json=json_dict,
+    )
+
+    response = http_client.request(
+        method=method,
+        url=url,
+    )
+
+    assert response.status_code == status_code
+    assert response.headers.get(
+        "content-type"
+    ) == application_json_headers.get("content-type")
+    assert response.content == json_bytes
+    assert response.text() == json_bytes.decode("utf-8")
+    assert response.json() == json_dict
