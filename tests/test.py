@@ -51,7 +51,7 @@ def test_http_request_error(http_client: HTTPClient, httpx_mock: HTTPXMock):
     assert str(exc.value) == "Request error"
 
 
-def test_http_status_error(http_client: HTTPClient, httpx_mock: HTTPXMock):
+def test_http_status_error_with_exception(http_client: HTTPClient, httpx_mock: HTTPXMock):
     httpx_mock.add_response(
         status_code=404,
         method="POST",
@@ -64,4 +64,4 @@ def test_http_status_error(http_client: HTTPClient, httpx_mock: HTTPXMock):
             method="POST", url="", event_hooks={"response": [raise_on_4xx_5xx]}
         )
 
-    assert str(exc.value) == "404"
+    assert exc.value.message == "Error"
