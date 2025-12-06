@@ -2,10 +2,10 @@ from typing import Generator
 
 import pytest
 
-from main import HttpClient
+from client.client import HTTPClient
 
 
 @pytest.fixture
-def http_client() -> Generator[HttpClient]:
-    http_client = HttpClient("https://test_url")
+def http_client() -> Generator[HTTPClient]:
+    http_client = HTTPClient("https://test_url")
     yield http_client
