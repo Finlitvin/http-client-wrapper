@@ -1,0 +1,25 @@
+line-length = 79
+
+exclude = [
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".ruff_cache",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "uv.lock",
+]
+
+[lint]
+select = [
+    "E",
+    "F",
+    "W",
+    "UP",
+    "N"
+]
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401", "F403"]
+"*.py" = ["N818"]

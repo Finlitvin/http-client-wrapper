@@ -55,7 +55,8 @@ class HTTPClient(HTTPClientInterface):
                     content=response.content,
                     headers=dict(response.headers),
                     json_data=response.json()
-                    if response.headers.get("content-type") == "application/json"
+                    if response.headers.get("content-type")
+                    == "application/json"
                     else None,
                 )
 

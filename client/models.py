@@ -37,4 +37,4 @@ class HTTPResponse(HTTPResponseInterface):
         return self.content
 
     def __str__(self) -> str:
-        return f"HTTPResponse(status_code={self.status_code})"
+        return str(self.status_code)
