@@ -21,6 +21,7 @@ def test_request_get(
     url = ""
 
     httpx_mock.add_response(
+        url=url,
         headers=application_json_headers,
         json=json_dict,
     )
@@ -47,6 +48,7 @@ def test_request_post(
 
     httpx_mock.add_response(
         method=method,
+        url=url,
         headers=application_json_headers,
         json=json_dict,
     )
@@ -67,28 +69,46 @@ def test_http_communication_error(
 ):
     method = "POST"
     url = ""
-    exception_str = "Request error"
+    error_str = "Request error"
 
-    httpx_mock.add_exception(RequestError(exception_str))
+    httpx_mock.add_exception(RequestError(error_str))
     with pytest.raises(HTTPCommunicationError) as exc:
         _ = http_client.request(method, url)
 
-    assert str(exc.value) == exception_str
+    assert str(exc.value) == error_str
 
 
 def test_http_status_error_with_exception(
-    http_client: HTTPClient, httpx_mock: HTTPXMock
+    http_client: HTTPClient,
+    httpx_mock: HTTPXMock,
+    application_json_headers: dict,
+    json_dict: dict,
+    json_bytes: bytes,
 ):
+    method = "POST"
+    url = ""
+    error_str = "Error"
+    status_code = 404
+
     httpx_mock.add_response(
-        status_code=404,
-        method="POST",
-        headers={"Content-Type": "application/json"},
-        json={},
+        status_code=status_code,
+        method=method,
+        headers=application_json_headers,
+        json=json_dict,
     )
 
     with pytest.raises(HTTPRequestError) as exc:
         _ = http_client.request(
-            method="POST", url="", event_hooks={"response": [raise_on_4xx_5xx]}
+            method=method,
+            url=url,
+            event_hooks={"response": [raise_on_4xx_5xx]},
         )
 
-    assert exc.value.message == "Error"
+    assert exc.value.message == error_str
+    assert exc.value.response.status_code == status_code
+    assert exc.value.response.headers.get(
+        "content-type"
+    ) == application_json_headers.get("content-type")
+    assert exc.value.response.content == json_bytes
+    assert exc.value.response.text() == json_bytes.decode("utf-8")
+    assert exc.value.response.json() == json_dict
