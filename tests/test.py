@@ -62,11 +62,18 @@ def test_request_post(
     assert response.json() == json_dict
 
 
-def test_http_request_error(http_client: HTTPClient, httpx_mock: HTTPXMock):
-    httpx_mock.add_exception(RequestError("Request error"))
+def test_http_communication_error(
+    http_client: HTTPClient, httpx_mock: HTTPXMock
+):
+    method = "POST"
+    url = ""
+    exception_str = "Request error"
+
+    httpx_mock.add_exception(RequestError(exception_str))
     with pytest.raises(HTTPCommunicationError) as exc:
-        _ = http_client.request("GET", "")
-    assert str(exc.value) == "Request error"
+        _ = http_client.request(method, url)
+
+    assert str(exc.value) == exception_str
 
 
 def test_http_status_error_with_exception(
